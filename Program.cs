@@ -63,7 +63,8 @@ namespace DotNet10Checker
             { "Language", "语言" },
             { "Version", "版本" },
             { "Title2", "=== .NET 10+ 运行时检测 ===" },
-            { "DotnetExe", "dotnet.exe:" }
+            { "DotnetExe", "dotnet.exe:" },
+            { "Download", "下载 .NET 10" }
         };
 
         static Dictionary<string, string> zhTW = new()
@@ -85,7 +86,8 @@ namespace DotNet10Checker
             { "Language", "語言" },
             { "Version", "版本" },
             { "Title2", "=== .NET 10+ 執行階段檢測 ===" },
-            { "DotnetExe", "dotnet.exe:" }
+            { "DotnetExe", "dotnet.exe:" },
+            { "Download", "下載 .NET 10" }
         };
 
         static Dictionary<string, string> en = new()
@@ -107,7 +109,8 @@ namespace DotNet10Checker
             { "Language", "Language" },
             { "Version", "Version" },
             { "Title2", "=== .NET 10+ Runtime Detection ===" },
-            { "DotnetExe", "dotnet.exe:" }
+            { "DotnetExe", "dotnet.exe:" },
+            { "Download", "Download .NET 10" }
         };
     }
 
@@ -115,6 +118,7 @@ namespace DotNet10Checker
     {
         private TextBox txtResult = null!;
         private Button btnCheck = null!;
+        private Button btnDownload = null!;
         private ProgressBar progressBar = null!;
         private Label lblStatus = null!;
         private ComboBox cboLanguage = null!;
@@ -122,6 +126,7 @@ namespace DotNet10Checker
         private Label titleLabel = null!;
         private Label subLabel = null!;
         private Language currentLang = Language.zhCN;
+        private const string DotNet10DownloadUrl = "https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/10.0.7/windowsdesktop-runtime-10.0.7-win-x86.exe";
 
         public MainForm()
         {
@@ -192,6 +197,20 @@ namespace DotNet10Checker
             btnCheck.FlatAppearance.BorderSize = 0;
             btnCheck.Click += BtnCheck_Click;
 
+            btnDownload = new Button
+            {
+                Text = Strings.Get("Download"),
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                BackColor = Color.FromArgb(40, 167, 69),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Location = new Point(160, 115),
+                Size = new Size(160, 35),
+                Visible = false
+            };
+            btnDownload.FlatAppearance.BorderSize = 0;
+            btnDownload.Click += BtnDownload_Click;
+
             progressBar = new ProgressBar
             {
                 Location = new Point(160, 125),
@@ -213,7 +232,20 @@ namespace DotNet10Checker
                 BorderStyle = BorderStyle.FixedSingle
             };
 
-            Controls.AddRange(new Control[] { titleLabel, subLabel, lblLanguage, cboLanguage, lblStatus, btnCheck, progressBar, txtResult });
+            Controls.AddRange(new Control[] { titleLabel, subLabel, lblLanguage, cboLanguage, lblStatus, btnCheck, btnDownload, progressBar, txtResult });
+        }
+
+        private void BtnDownload_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = DotNet10DownloadUrl,
+                    UseShellExecute = true
+                });
+            }
+            catch { }
         }
 
         private void CboLanguage_SelectedIndexChanged(object sender, EventArgs e)
@@ -253,12 +285,14 @@ namespace DotNet10Checker
                     lblStatus.Text = Strings.Get("Found");
                     lblStatus.ForeColor = Color.Lime;
                     txtResult.ForeColor = Color.Lime;
+                    btnDownload.Visible = false;
                 }
                 else
                 {
                     lblStatus.Text = Strings.Get("NotFound");
                     lblStatus.ForeColor = Color.Red;
                     txtResult.ForeColor = Color.Tomato;
+                    btnDownload.Visible = !result.HasRuntimes;
                 }
             }
             catch (Exception ex)
@@ -285,7 +319,7 @@ namespace DotNet10Checker
             if (dotnetPath == null)
             {
                 output.AppendLine(Strings.Get("NotFoundInPath"));
-                return new CheckResult { Text = output.ToString(), Success = false };
+                return new CheckResult { Text = output.ToString(), Success = false, HasRuntimes = false };
             }
 
             output.AppendLine($"{Strings.Get("DotnetExe")} {dotnetPath}");
@@ -295,7 +329,7 @@ namespace DotNet10Checker
             if (runtimes.Count == 0)
             {
                 output.AppendLine(Strings.Get("NoRuntimes"));
-                return new CheckResult { Text = output.ToString(), Success = false };
+                return new CheckResult { Text = output.ToString(), Success = false, HasRuntimes = false };
             }
 
             output.AppendLine(Strings.Get("InstalledRuntimes"));
@@ -317,14 +351,14 @@ namespace DotNet10Checker
             {
                 output.AppendLine();
                 output.AppendLine(string.Format(Strings.Get("Success"), dotNet10Plus.Count));
-                return new CheckResult { Text = output.ToString(), Success = true };
+                return new CheckResult { Text = output.ToString(), Success = true, HasRuntimes = true };
             }
             else
             {
                 output.AppendLine();
                 output.AppendLine(Strings.Get("Failed"));
                 output.AppendLine(Strings.Get("FailedHint"));
-                return new CheckResult { Text = output.ToString(), Success = false };
+                return new CheckResult { Text = output.ToString(), Success = false, HasRuntimes = true };
             }
         }
 
@@ -446,5 +480,6 @@ namespace DotNet10Checker
     {
         public string Text { get; set; } = "";
         public bool Success { get; set; }
+        public bool HasRuntimes { get; set; }
     }
 }
