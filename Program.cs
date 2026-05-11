@@ -27,7 +27,7 @@ namespace DotNet10Checker
         private static int _currentIndex;
         public static int CurrentIndex
         {
-            get => _currentIndex;
+            get { return _currentIndex; }
             set
             {
                 _currentIndex = value;
@@ -36,15 +36,22 @@ namespace DotNet10Checker
         }
         public static Language CurrentLang { get; private set; } = Language.zhCN;
 
-        public static string Get(string key) => CurrentLang switch
+        public static string Get(string key)
         {
-            Language.zhCN => zhCN.TryGetValue(key, out var v) ? v : "",
-            Language.zhTW => zhTW.TryGetValue(key, out var v) ? v : "",
-            Language.en => en.TryGetValue(key, out var v) ? v : "",
-            _ => ""
-        };
+            switch (CurrentLang)
+            {
+                case Language.zhCN:
+                    return zhCN.TryGetValue(key, out var v1) ? v1 : "";
+                case Language.zhTW:
+                    return zhTW.TryGetValue(key, out var v2) ? v2 : "";
+                case Language.en:
+                    return en.TryGetValue(key, out var v3) ? v3 : "";
+                default:
+                    return "";
+            }
+        }
 
-        static Dictionary<string, string> zhCN = new()
+        static Dictionary<string, string> zhCN = new Dictionary<string, string>
         {
             { "Title", ".NET 10+ 运行时检测" },
             { "Subtitle", "检查 .NET 10 或更高版本是否已安装" },
@@ -67,7 +74,7 @@ namespace DotNet10Checker
             { "Download", "下载 .NET 10" }
         };
 
-        static Dictionary<string, string> zhTW = new()
+        static Dictionary<string, string> zhTW = new Dictionary<string, string>
         {
             { "Title", ".NET 10+ 執行階段檢測" },
             { "Subtitle", "檢查 .NET 10 或更高版本是否已安裝" },
@@ -90,7 +97,7 @@ namespace DotNet10Checker
             { "Download", "下載 .NET 10" }
         };
 
-        static Dictionary<string, string> en = new()
+        static Dictionary<string, string> en = new Dictionary<string, string>
         {
             { "Title", ".NET 10+ Runtime Checker" },
             { "Subtitle", "Checks if .NET 10 or higher is installed" },
@@ -116,15 +123,15 @@ namespace DotNet10Checker
 
     class MainForm : Form
     {
-        private TextBox txtResult = null!;
-        private Button btnCheck = null!;
-        private Button btnDownload = null!;
-        private ProgressBar progressBar = null!;
-        private Label lblStatus = null!;
-        private ComboBox cboLanguage = null!;
-        private Label lblLanguage = null!;
-        private Label titleLabel = null!;
-        private Label subLabel = null!;
+        private TextBox txtResult;
+        private Button btnCheck;
+        private Button btnDownload;
+        private ProgressBar progressBar;
+        private Label lblStatus;
+        private ComboBox cboLanguage;
+        private Label lblLanguage;
+        private Label titleLabel;
+        private Label subLabel;
         private Language currentLang = Language.zhCN;
         private const string DotNet10DownloadUrl = "https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/10.0.7/windowsdesktop-runtime-10.0.7-win-x86.exe";
 
@@ -277,7 +284,7 @@ namespace DotNet10Checker
 
             try
             {
-                var result = await Task.Run(() => CheckRuntimes());
+                CheckResult result = await Task.Run(() => CheckRuntimes());
                 txtResult.Text = result.Text;
 
                 if (result.Success)
@@ -297,7 +304,7 @@ namespace DotNet10Checker
             }
             catch (Exception ex)
             {
-                txtResult.Text = $"{Strings.Get("Error")}: {ex.Message}";
+                txtResult.Text = Strings.Get("Error") + ": " + ex.Message;
                 txtResult.ForeColor = Color.Tomato;
                 lblStatus.Text = Strings.Get("Error");
                 lblStatus.ForeColor = Color.Red;
@@ -311,21 +318,21 @@ namespace DotNet10Checker
 
         private CheckResult CheckRuntimes()
         {
-            var output = new System.Text.StringBuilder();
+            System.Text.StringBuilder output = new System.Text.StringBuilder();
             output.AppendLine(Strings.Get("Title2"));
             output.AppendLine();
 
-            var dotnetPath = FindDotnetExecutable();
+            string dotnetPath = FindDotnetExecutable();
             if (dotnetPath == null)
             {
                 output.AppendLine(Strings.Get("NotFoundInPath"));
                 return new CheckResult { Text = output.ToString(), Success = false, HasRuntimes = false };
             }
 
-            output.AppendLine($"{Strings.Get("DotnetExe")} {dotnetPath}");
+            output.AppendLine(Strings.Get("DotnetExe") + " " + dotnetPath);
             output.AppendLine();
 
-            var runtimes = GetInstalledRuntimes(dotnetPath);
+            List<RuntimeInfo> runtimes = GetInstalledRuntimes(dotnetPath);
             if (runtimes.Count == 0)
             {
                 output.AppendLine(Strings.Get("NoRuntimes"));
@@ -335,13 +342,13 @@ namespace DotNet10Checker
             output.AppendLine(Strings.Get("InstalledRuntimes"));
             output.AppendLine("---------------------------");
 
-            var dotNet10Plus = runtimes.Where(r => r.VersionMajor >= 10).ToList();
+            List<RuntimeInfo> dotNet10Plus = runtimes.Where(r => r.VersionMajor >= 10).ToList();
 
-            foreach (var runtime in runtimes.OrderByDescending(r => r.VersionMajor).ThenByDescending(r => r.Name))
+            foreach (RuntimeInfo runtime in runtimes.OrderByDescending(r => r.VersionMajor).ThenByDescending(r => r.Name))
             {
-                var indicator = runtime.VersionMajor >= 10 ? "[10+]" : "    ";
-                output.AppendLine($"{indicator} {runtime.Name}");
-                output.AppendLine($"      {Strings.Get("Version")}: {runtime.Version}");
+                string indicator = runtime.VersionMajor >= 10 ? "[10+]" : "    ";
+                output.AppendLine(indicator + " " + runtime.Name);
+                output.AppendLine("      " + Strings.Get("Version") + ": " + runtime.Version);
             }
 
             output.AppendLine();
@@ -364,23 +371,23 @@ namespace DotNet10Checker
 
         private string FindDotnetExecutable()
         {
-            var pathEnv = Environment.GetEnvironmentVariable("PATH");
+            string pathEnv = Environment.GetEnvironmentVariable("PATH");
             if (pathEnv != null)
             {
-                var paths = pathEnv.Split(Path.PathSeparator);
-                foreach (var path in paths)
+                string[] paths = pathEnv.Split(Path.PathSeparator);
+                foreach (string path in paths)
                 {
-                    var dotnetExe = Path.Combine(path.Trim(), "dotnet.exe");
+                    string dotnetExe = Path.Combine(path.Trim(), "dotnet.exe");
                     if (File.Exists(dotnetExe)) return dotnetExe;
                 }
             }
 
-            var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            var defaultPath = Path.Combine(programFiles, "dotnet", "dotnet.exe");
+            string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            string defaultPath = Path.Combine(programFiles, "dotnet", "dotnet.exe");
             if (File.Exists(defaultPath)) return defaultPath;
 
-            var programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-            var x86Path = Path.Combine(programFilesX86, "dotnet", "dotnet.exe");
+            string programFilesX86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            string x86Path = Path.Combine(programFilesX86, "dotnet", "dotnet.exe");
             if (File.Exists(x86Path)) return x86Path;
 
             return null;
@@ -388,8 +395,8 @@ namespace DotNet10Checker
 
         private List<RuntimeInfo> GetInstalledRuntimes(string dotnetPath)
         {
-            var runtimes = new List<RuntimeInfo>();
-            var validRuntimes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            List<RuntimeInfo> runtimes = new List<RuntimeInfo>();
+            HashSet<string> validRuntimes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
                 "Microsoft.NETCore.App",
                 "Microsoft.WindowsDesktop.App",
@@ -398,7 +405,7 @@ namespace DotNet10Checker
 
             try
             {
-                var startInfo = new ProcessStartInfo
+                ProcessStartInfo startInfo = new ProcessStartInfo
                 {
                     FileName = dotnetPath,
                     Arguments = "--list-runtimes",
@@ -408,7 +415,7 @@ namespace DotNet10Checker
                     CreateNoWindow = true
                 };
 
-                using (var process = new Process { StartInfo = startInfo })
+                using (Process process = new Process { StartInfo = startInfo })
                 {
                     process.Start();
 
@@ -418,37 +425,41 @@ namespace DotNet10Checker
                         throw new InvalidOperationException("dotnet command timed out");
                     }
 
-                    var output = process.StandardOutput.ReadToEnd();
+                    string output = process.StandardOutput.ReadToEnd();
 
                     if (process.ExitCode != 0)
                     {
-                        var error = process.StandardError.ReadToEnd();
-                        throw new InvalidOperationException($"dotnet command failed: {error}");
+                        string error = process.StandardError.ReadToEnd();
+                        throw new InvalidOperationException("dotnet command failed: " + error);
                     }
 
-                    var lines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                    foreach (var line in lines)
+                    string[] lines = output.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (string line in lines)
                     {
-                        var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                        string[] parts = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                         if (parts.Length >= 2)
                         {
-                            var name = parts[0];
-                            var version = parts[1];
+                            string name = parts[0];
+                            string version = parts[1];
 
                             if (validRuntimes.Contains(name))
                             {
-                                var versionParts = version.Split('.');
-                                if (versionParts.Length >= 1 && int.TryParse(versionParts[0], out int majorVersion) && majorVersion >= 5)
+                                string[] versionParts = version.Split('.');
+                                if (versionParts.Length >= 1)
                                 {
-                                    var existing = runtimes.FirstOrDefault(r => r.Name == name && r.Version == version);
-                                    if (existing == null)
+                                    int majorVersion;
+                                    if (int.TryParse(versionParts[0], out majorVersion) && majorVersion >= 5)
                                     {
-                                        runtimes.Add(new RuntimeInfo
+                                        RuntimeInfo existing = runtimes.FirstOrDefault(r => r.Name == name && r.Version == version);
+                                        if (existing == null)
                                         {
-                                            Name = name,
-                                            Version = version,
-                                            VersionMajor = majorVersion
-                                        });
+                                            runtimes.Add(new RuntimeInfo
+                                            {
+                                                Name = name,
+                                                Version = version,
+                                                VersionMajor = majorVersion
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -471,14 +482,14 @@ namespace DotNet10Checker
 
     class RuntimeInfo
     {
-        public string Name { get; set; } = "";
-        public string Version { get; set; } = "";
+        public string Name { get; set; }
+        public string Version { get; set; }
         public int VersionMajor { get; set; }
     }
 
     class CheckResult
     {
-        public string Text { get; set; } = "";
+        public string Text { get; set; }
         public bool Success { get; set; }
         public bool HasRuntimes { get; set; }
     }
